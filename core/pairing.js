@@ -1,17 +1,24 @@
-const readline = require('readline')
+async function startPairingFlow(sock) {
+  console.log('\n📲 Enter phone number with country code (e.g. 254768116434):')
 
-async function handlePairing(sock) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  })
+  process.stdin.resume()
+  process.stdin.setEncoding('utf8')
 
-  rl.question('Enter phone number (with country code): ', async number => {
-    number = number.replace(/\D/g, '')
-    const code = await sock.requestPairingCode(number)
-    console.log(`\nPAIRING CODE: ${code}\n`)
-    rl.close()
+  process.stdin.once('data', async input => {
+    try {
+      const number = input.toString().trim().replace(/\D/g, '')
+
+      if (!number) {
+        console.log('❌ Invalid phone number')
+        return
+      }
+
+      const code = await sock.requestPairingCode(number)
+      console.log(`\n🔐 PAIRING CODE: ${code}\n`)
+    } catch (err) {
+      console.error('❌ Failed to generate pairing code:', err.message)
+    }
   })
 }
 
-module.exports = { handlePairing }
+module.exports = { startPairingFlow }
