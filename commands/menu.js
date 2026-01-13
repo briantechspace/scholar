@@ -2,15 +2,13 @@ const { menuText } = require('../config/menu')
 const { menuButtons } = require('../config/buttons')
 const settings = require('../database/settings.json')
 
-async function handleMenu(sock, msg) {
+module.exports = async (sock, msg) => {
   const owner = settings.ownerName || 'Brian'
 
   await sock.sendMessage(msg.key.remoteJid, {
     text: menuText(owner),
     buttons: menuButtons,
-    footer: 'Scholar Bot',
+    footer: 'Scholar',
     headerType: 1
   })
 }
-
-module.exports = { handleMenu }
