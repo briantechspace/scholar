@@ -5,7 +5,7 @@ const {
 } = require('@whiskeysockets/baileys')
 
 const P = require('pino')
-const { handlePairing } = require('./pairing')
+const { startPairingFlow } = require('./pairing')
 const { registerEvents } = require('./events')
 
 async function connectBot() {
@@ -19,11 +19,20 @@ async function connectBot() {
     printQRInTerminal: false
   })
 
-  if (!state.creds.registered) {
-    await handlePairing(sock)
-  }
-
   sock.ev.on('creds.update', saveCreds)
+
+  sock.ev.on('connection.update', async update => {
+    const { connection } = update
+
+    if (connection === 'open') {
+      console.log('✅ WhatsApp socket connected')
+
+      // ONLY start pairing after socket is open
+      if (!state.creds.registered) {
+        await startPairingFlow(sock)
+      }
+    }
+  })
 
   registerEvents(sock)
 }
