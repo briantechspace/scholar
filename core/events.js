@@ -1,28 +1,34 @@
-const { handleMenu } = require('../commands/menu')
-const { handleVV } = require('../commands/vv')
-const { handleSettings } = require('../commands/settings')
-const { handleWelcomeEvent } = require('../commands/welcome')
-const { handleAutoViewStatus } = require('../commands/autoviewstatus')
+const { PREFIX } = require('../settings')
 
 function registerEvents(sock) {
-
   sock.ev.on('messages.upsert', async ({ messages }) => {
-    const msg = messages[0]
-    if (!msg.message || msg.key.fromMe) return
+    try {
+      const msg = messages[0]
+      if (!msg || !msg.message) return
+      if (msg.key.fromMe) return
 
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      ''
+      const from = msg.key.remoteJid
+      const text =
+        msg.message.conversation ||
+        msg.message.extendedTextMessage?.text ||
+        ''
 
-    if (text.startsWith('.menu')) return handleMenu(sock, msg)
-    if (text === '.vv') return handleVV(sock, msg)
-    if (text.startsWith('.setownername')) return handleSettings(sock, msg)
-    if (text.startsWith('.autoviewstatus')) return handleAutoViewStatus(sock, msg)
-  })
+      if (!text.startsWith(PREFIX)) return
 
-  sock.ev.on('group-participants.update', async data => {
-    await handleWelcomeEvent(sock, data)
+      const args = text.slice(PREFIX.length).trim().split(/ +/)
+      const command = args.shift().toLowerCase()
+
+      console.log(`📩 Command received: ${command} from ${from}`)
+
+      // BASIC COMMAND TEST
+      if (command === 'menu') {
+        await sock.sendMessage(from, {
+          text: '📜 Scholar menu is working ✅'
+        })
+      }
+    } catch (err) {
+      console.error('❌ Message handler error:', err)
+    }
   })
 }
 
