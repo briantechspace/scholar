@@ -1,33 +1,42 @@
-const { PREFIX } = require('../settings')
+const fs = require('fs')
+const path = require('path')
+
+const commandsPath = path.join(__dirname, '../commands')
 
 function registerEvents(sock) {
   sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0]
+    if (!msg || !msg.message) return
+    if (msg.key.fromMe) return
+
+    const text =
+      msg.message.conversation ||
+      msg.message.extendedTextMessage?.text ||
+      ''
+
+    if (!text) return
+
+    // read prefix from database
+    const settings = JSON.parse(
+      fs.readFileSync('./database/settings.json', 'utf-8')
+    )
+    const prefix = settings.prefix || '.'
+
+    if (!text.startsWith(prefix)) return
+
+    const args = text.slice(prefix.length).trim().split(/ +/)
+    const commandName = args.shift().toLowerCase()
+
+    const commandFile = path.join(commandsPath, `${commandName}.js`)
+
+    if (!fs.existsSync(commandFile)) return
+
     try {
-      const msg = messages[0]
-      if (!msg || !msg.message) return
-      if (msg.key.fromMe) return
-
-      const from = msg.key.remoteJid
-      const text =
-        msg.message.conversation ||
-        msg.message.extendedTextMessage?.text ||
-        ''
-
-      if (!text.startsWith(PREFIX)) return
-
-      const args = text.slice(PREFIX.length).trim().split(/ +/)
-      const command = args.shift().toLowerCase()
-
-      console.log(`📩 Command received: ${command} from ${from}`)
-
-      // BASIC COMMAND TEST
-      if (command === 'menu') {
-        await sock.sendMessage(from, {
-          text: '📜 Scholar menu is working ✅'
-        })
-      }
+      const command = require(commandFile)
+      await command(sock, msg, args)
+      console.log(`✅ Command executed: ${commandName}`)
     } catch (err) {
-      console.error('❌ Message handler error:', err)
+      console.error(`❌ Error in command ${commandName}:`, err)
     }
   })
 }
