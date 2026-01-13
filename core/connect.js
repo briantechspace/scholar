@@ -9,6 +9,8 @@ const { startPairingFlow } = require('./pairing')
 const { registerEvents } = require('./events')
 
 async function connectBot() {
+  console.log('🚀 Starting Scholar bot...')
+
   const { state, saveCreds } = await useMultiFileAuthState('./session')
   const { version } = await fetchLatestBaileysVersion()
 
@@ -21,20 +23,23 @@ async function connectBot() {
 
   sock.ev.on('creds.update', saveCreds)
 
-  sock.ev.on('connection.update', async update => {
-    const { connection } = update
+  if (!state.creds.registered) {
+    startPairingFlow(sock)
+  }
 
+  sock.ev.on('connection.update', ({ connection }) => {
     if (connection === 'open') {
-      console.log('✅ WhatsApp socket connected')
-
-      // ONLY start pairing after socket is open
-      if (!state.creds.registered) {
-        await startPairingFlow(sock)
-      }
+      console.log('✅ Scholar bot connected to WhatsApp')
+    }
+    if (connection === 'close') {
+      console.log('⚠️ Connection closed, waiting...')
     }
   })
 
   registerEvents(sock)
+
+  // 🔥 KEEP PROCESS ALIVE
+  await new Promise(() => {})
 }
 
 module.exports = { connectBot }
